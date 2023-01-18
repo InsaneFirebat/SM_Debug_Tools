@@ -2019,6 +2019,14 @@ SetupEquipmentMenus:
 +   RTL
 }
 
+HexMenuGFXTable:
+    dw $2C70, $2C71, $2C72, $2C73, $2C74, $2C75, $2C76, $2C77, $2C78, $2C79, $2C50, $2C51, $2C52, $2C53, $2C54, $2C55
+
+DecMenuGFXTable:
+    dw $2C20, $2C21, $2C22, $2C23, $2C24, $2C25, $2C26, $2C27, $2C28, $2C29
+print pc, " menu end"
+
+
 pushpc
 org !FREESPACE_DEBUG_MENU_BANK80
 print pc, " transfer_cgram_long start"
@@ -2043,19 +2051,11 @@ pullpc
 print pc, " mainmenu start"
 incsrc mainmenu.asm
 print pc, " mainmenu end"
-pullpc
 
 
 ; ---------
 ; Resources
 ; ---------
-
-HexMenuGFXTable:
-    dw $2C70, $2C71, $2C72, $2C73, $2C74, $2C75, $2C76, $2C77, $2C78, $2C79, $2C50, $2C51, $2C52, $2C53, $2C54, $2C55
-
-DecMenuGFXTable:
-    dw $2C20, $2C21, $2C22, $2C23, $2C24, $2C25, $2C26, $2C27, $2C28, $2C29
-print pc, " menu end"
 
 org !FREESPACE_DEBUG_MENU_GFX
 print pc, " menu graphics start"

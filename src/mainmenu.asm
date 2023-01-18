@@ -175,15 +175,12 @@ mm_goto_memoryeditor:
     PLY
     JML action_submenu
 
-; This pushpc will be pulled back in menu.asm
-pushpc
-
 
 ; ----------------
 ; Equipment menu
 ; ----------------
 
-org !FREESPACE_DEBUG_MENU_EQUIPMENT
+;org !FREESPACE_DEBUG_MENU_EQUIPMENT
 print pc, " mainmenu Equipment start"
 EquipmentMenu:
     dw #eq_refill
@@ -596,7 +593,7 @@ print pc, " mainmenu Equipment end"
 ; Teleport Menu
 ; -------------
 
-org !FREESPACE_DEBUG_MENU_TELEPORT
+;org !FREESPACE_DEBUG_MENU_TELEPORT
 print pc, " mainmenu Teleport start"
 
 ; The entire load station list is included here, but empty entries are commented out to save space by default
@@ -1309,7 +1306,7 @@ print pc, " mainmenu Teleport end"
 ; Misc menu
 ; -----------
 
-org !FREESPACE_DEBUG_MENU_MISC
+;org !FREESPACE_DEBUG_MENU_MISC
 print pc, " mainmenu Misc start"
 
 MiscMenu:
@@ -1386,7 +1383,7 @@ print pc, " mainmenu Misc end"
 ; Events menu
 ; -----------
 
-org !FREESPACE_DEBUG_MENU_EVENTS
+;org !FREESPACE_DEBUG_MENU_EVENTS
 print pc, " mainmenu Events start"
 
 EventsMenu:
@@ -1555,7 +1552,7 @@ print pc, " mainmenu Events end"
 ; Game menu
 ; ----------
 
-org !FREESPACE_DEBUG_MENU_GAME
+;org !FREESPACE_DEBUG_MENU_GAME
 print pc, " mainmenu GameMenu start"
 
 GameMenu:
@@ -1930,7 +1927,7 @@ print pc, " mainmenu GameMenu end"
 ; Sound Test
 ; ----------
 
-org !FREESPACE_DEBUG_MENU_SOUND
+;org !FREESPACE_DEBUG_MENU_SOUND
 print pc, " mainmenu SoundTest start"
 
 SoundTestMenu:
@@ -2175,7 +2172,7 @@ print pc, " mainmenu SoundTest end"
 ; Memory Editor Menu
 ; ------------------
 
-org !FREESPACE_DEBUG_MENU_EDITOR
+;org !FREESPACE_DEBUG_MENU_EDITOR
 print pc, " mainmenu MemoryEditor start"
 
 MemoryEditorMenu:
