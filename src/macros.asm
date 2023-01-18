@@ -1,0 +1,300 @@
+
+; ---------------
+; General Purpose
+; ---------------
+
+macro a8() ; A = 8-bit
+    SEP #$20
+endmacro
+
+macro a16() ; A = 16-bit
+    REP #$20
+endmacro
+
+macro i8() ; X/Y = 8-bit
+    SEP #$10
+endmacro
+
+macro i16() ; X/Y = 16-bit
+    REP #$10
+endmacro
+
+macro ai8() ; A + X/Y = 8-bit
+    SEP #$30
+endmacro
+
+macro ai16() ; A + X/Y = 16-bit
+    REP #$30
+endmacro
+
+
+; ----------
+; Debug Menu
+; ----------
+
+macro item_index_to_vram_index()
+; Find screen position from Y (item number)
+    TYA : ASL #5
+    CLC : ADC #$0146 : TAX
+endmacro
+
+macro cm_header(title)
+; Used to assign outlined text (in all caps, see resources/header.tbl) to the top of a menu
+    table ../resources/header.tbl
+    db #$28, "<title>", #$FF
+    table ../resources/normal.tbl
+endmacro
+
+macro cm_footer(title)
+; Used to assign outlined text (in all caps, see resources/header.tbl) to the bottom of a menu
+    table ../resources/header.tbl
+    dw #$F007 : db #$28, "<title>", #$FF
+    table ../resources/normal.tbl
+endmacro
+
+macro cm_numfield(title, addr, start, end, increment, heldincrement, jsltarget)
+; Allows editing an 8-bit value at the specified address
+    dw !ACTION_NUMFIELD
+    dl <addr>
+    db <start>, <end>, <increment>;, <heldincrement>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_numfield_word(title, addr, start, end, increment, heldincrement, jsltarget)
+; Allows editing an 16-bit value at the specified address
+    dw !ACTION_NUMFIELD_WORD
+    dl <addr>
+    dw <start>, <end>, <increment>;, <heldincrement>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_numfield_hex(title, addr, start, end, increment, heldincrement, jsltarget)
+; Allows editing an 8-bit value displayed in hexadecimal
+    dw !ACTION_NUMFIELD_HEX
+    dl <addr>
+    db <start>, <end>, <increment>;, <heldincrement>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_numfield_hex_word(title, addr)
+; Displays a 16-bit value in hexadecimal
+    dw !ACTION_NUMFIELD_HEX_WORD
+    dl <addr>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_toggle(title, addr, value, jsltarget)
+; Allows an 8-bit value to be toggled between zero and the specified value
+    dw !ACTION_TOGGLE
+    dl <addr>
+    db <value>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_toggle_inverted(title, addr, value, jsltarget)
+; The same toggle as above, but with zero considered ON/enabled
+    dw !ACTION_TOGGLE_INVERTED
+    dl <addr>
+    db <value>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_toggle_bit(title, addr, mask, jsltarget)
+; Allows a individual bits of a 16-bit value to be toggled
+    dw !ACTION_TOGGLE_BIT
+    dl <addr>
+    dw <mask>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_toggle_bit_inverted(title, addr, mask, jsltarget)
+; The same toggle as above, but with zero considered ON/enabled
+    dw !ACTION_TOGGLE_BIT_INVERTED
+    dl <addr>
+    dw <mask>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_jsl(title, routine, argument)
+; Executes code on demand
+    dw !ACTION_JSL
+    dw <routine>
+    dw <argument>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_mainmenu(title, target)
+; Jump to a submenu in any bank
+    %cm_jsl("<title>", #action_mainmenu, <target>)
+endmacro
+
+macro cm_jsl_submenu(title, routine, argument)
+; Not sure if this is still necessary
+    dw !ACTION_JSL_SUBMENU
+    dw <routine>
+    dw <argument>
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_submenu(title, target)
+; Jump to a submenu in the same bank
+    %cm_jsl_submenu("<title>", #action_submenu, <target>)
+endmacro
+
+macro cm_ctrl_input(title, addr)
+; Opens a submenu to assign a controller binding
+    dw !ACTION_CTRL_INPUT
+    dl <addr>
+    dw action_submenu
+    dw AssignControlsMenu
+    db #$28, "<title>", #$FF
+endmacro
+
+macro cm_equipment_item(title, addr, bitmask, inverse)
+; Allows three-way toggling of items:  ON/OFF/UNOBTAINED
+    dw !ACTION_CHOICE
+    dl <addr>
+    dw #.routine
+    db #$28, "<title>", #$FF
+    db #$28, " UNOBTAINED", #$FF
+    db #$28, "         ON", #$FF
+    db #$28, "        OFF", #$FF
+    db #$FF
+  .routine
+    LDA.w <addr> : STA !DP_Address
+    LDA.w <addr>>>16 : STA !DP_Address+2
+    LDA <bitmask> : STA !DP_ToggleValue
+    LDA <inverse> : STA !DP_Increment
+    JMP equipment_toggle_items
+endmacro
+
+macro cm_equipment_beam(name, addr, bitmask, inverse, and)
+; Allows three-way toggling of beams:  ON/OFF/UNOBTAINED
+    dw !ACTION_CHOICE
+    dl <addr>
+    dw #.routine
+    db #$28, "<name>", #$FF
+    db #$28, " UNOBTAINED", #$FF
+    db #$28, "         ON", #$FF
+    db #$28, "        OFF", #$FF
+    db #$FF
+  .routine
+    LDA.w #<addr> : STA !DP_Address
+    LDA.w #<addr>>>16 : STA !DP_Address+2
+    LDA <bitmask> : STA !DP_ToggleValue
+    LDA <inverse> : STA !DP_Increment
+    LDA <and> : STA !DP_Temp
+    JMP equipment_toggle_beams
+endmacro
+
+macro cm_numfield_sound(title, addr, start, end, increment, jsltarget)
+    dw !ACTION_NUMFIELD_SOUND
+    dl <addr>
+    db <start>, <end>, <increment>
+    dw <jsltarget>
+    db #$28, "<title>", #$FF
+endmacro
+
+
+; -------------
+; Sound Effects
+; -------------
+
+macro sfxmove() ; Move Cursor
+    LDA #$0037 : JSL !SFX_LIB1
+endmacro
+
+macro sfxconfirm() ; Confirm Selection
+    LDA #$0028 : JSL !SFX_LIB1
+endmacro
+
+macro sfxtoggle() ; Toggle
+    LDA #$0038 : JSL !SFX_LIB1
+endmacro
+
+macro sfxnumber() ; Number Selection
+    LDA #$002A : JSL !SFX_LIB1
+endmacro
+
+macro sfxgoback() ; Go Back
+    LDA #$0007 : JSL !SFX_LIB1
+endmacro
+
+macro sfxclick() ; play click sound lib1
+    LDA #$0037 : JSL !SFX_LIB1
+endmacro
+
+macro sfxtype() ; play typing sound lib2
+    LDA #$0045 : JSL !SFX_LIB2
+endmacro
+
+macro sfxpause() ; play pause menu sound lib1
+    LDA #$0038 : JSL !SFX_LIB1
+endmacro
+
+macro sfxstatue() ; play statue break sound lib2
+    LDA #$0019 : JSL !SFX_LIB2
+endmacro
+
+macro sfxbubble() ; play bubble sound lib2
+    LDA #$0011 : JSL !SFX_LIB2
+endmacro
+
+macro sfxquake() ; play earthquake sound lib3
+    LDA #$001E : JSL !SFX_LIB3
+endmacro
+
+macro sfxenergy() ; play energy drop sound lib2
+    LDA #$0002 : JSL !SFX_LIB2
+endmacro
+
+macro sfxgrapple() ; play grapple sound lib1
+    LDA #$0005 : JSL !SFX_LIB1
+endmacro
+
+macro sfxdoor() ; play door close sound lib3
+    LDA #$0008 : JSL !SFX_LIB3
+endmacro
+
+macro sfxship() ; play ship close sound lib3
+    LDA #$0015 : JSL !SFX_LIB3
+endmacro
+
+macro sfxmissile() ; play missile sound lib2
+    LDA #$0003 : JSL !SFX_LIB2
+endmacro
+
+macro sfxdisengage() ; play refill disengage sound lib2
+    LDA #$0038 : JSL !SFX_LIB2
+endmacro
+
+macro sfxbeep() ; play minimap movement beep sound lib1
+    LDA #$0036 : JSL !SFX_LIB1
+endmacro
+
+macro sfxdachora() ; play dachora cry sound lib2
+    LDA #$001D : JSL !SFX_LIB2
+endmacro
+
+macro sfxdamage() ; play damage boost sound lib1
+    LDA #$0035 : JSL !SFX_LIB1
+endmacro
+
+macro sfxshot() ; play credits shot sound lib1
+    LDA #$0022 : JSL !SFX_LIB1
+endmacro
+
+macro sfxsave() ; play save station sound lib1
+    LDA #$002E : JSL !SFX_LIB1
+endmacro
+
+macro sfxfail() ; play grapple end sound lib1
+    LDA #$0007 : JSL !SFX_LIB1
+endmacro

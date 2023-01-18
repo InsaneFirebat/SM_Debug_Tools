@@ -1,0 +1,7 @@
+*.srm
+*.s[mf]c
+build/*
+!build/.gitkeep
+build/HACK/*
+tools/asar.exe
+tools/dll/*
