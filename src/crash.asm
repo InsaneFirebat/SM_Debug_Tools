@@ -23,8 +23,10 @@ org $00FFE6
     dw BRKHandler
 
 ; Hijack emulation IRQ/BRK vector
-org $00FFFE
-    dw BRKHandler
+; Don't do this. A bug in vanilla code causes this to make Mini-Kraid cry
+; https://patrickjohnston.org/bank/A6?just=9BB2
+;org $00FFFE
+;    dw BRKHandler
 
 
 org !FREESPACE_CRASH_HANDLER

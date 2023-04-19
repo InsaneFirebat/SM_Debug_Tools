@@ -44,7 +44,7 @@
 ; Takes a text string, a 24-bit memory address, a minimum allowed value, maximum allowed value, an increment amount, and a 16-bit pointer to code
 
 ;;; cm_numfield_word
-; Allows editing an 16-bit value at the specified address
+; Allows editing a 16-bit value at the specified address
 ; Takes a text string, a 24-bit memory address, a minimum allowed value, maximum allowed value, an increment amount, and a 16-bit pointer to code
 ; Set the code pointer to zero if no additional code should be executed
 ; Code should return with RTL (tolerates 8/16-bit registers)
