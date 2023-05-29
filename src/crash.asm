@@ -236,7 +236,8 @@ CrashViewer:
     JSL crash_tileset_transfer
 
     LDA #$0000 : STA !ram_crash_page : STA !ram_crash_palette : STA !ram_crash_cursor
-    STA !ram_crash_input : STA !ram_crash_input_new : STA !ram_crash_input_prev
+    STA !ram_crash_input : STA !ram_crash_input_new
+    LDA $8F : STA !ram_crash_input_prev
     LDA #$0A44 : STA !ram_crash_mem_viewer
     LDA #$007E : STA !ram_crash_mem_viewer_bank
 
