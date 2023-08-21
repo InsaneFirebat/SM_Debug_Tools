@@ -90,6 +90,7 @@ cm_init:
     ; Set up menu state
     LDA #$0000 : STA !ram_cm_leave
     STA !ram_cm_stack_index : STA !ram_cm_cursor_stack
+    STA !ram_cm_horizontal_cursor : STA !ram_cm_ctrl_mode
     STA !CONTROLLER_PRI_NEW : STA !CONTROLLER_PRI
 
     LDA !FRAME_COUNTER : STA !ram_cm_input_counter
@@ -99,9 +100,7 @@ cm_init:
     LDA !ram_cm_init : BNE +
     JSR cm_first_menu_open
 
-+   JSL SetupEquipmentMenus
-
-    JSL cm_calculate_max
++   JSL cm_calculate_max
 
     RTS
 }
@@ -240,15 +239,17 @@ cm_transfer_custom_cgram:
     LDA $7EC016 : STA !ram_cgram_cache+$08
     LDA $7EC01A : STA !ram_cgram_cache+$0A
     LDA $7EC01C : STA !ram_cgram_cache+$0C
-    LDA $7EC032 : STA !ram_cgram_cache+$0E
-    LDA $7EC034 : STA !ram_cgram_cache+$10
-    LDA $7EC036 : STA !ram_cgram_cache+$12
-    LDA $7EC03A : STA !ram_cgram_cache+$14
-    LDA $7EC03C : STA !ram_cgram_cache+$16
+    LDA $7EC01E : STA !ram_cgram_cache+$0E
+    LDA $7EC032 : STA !ram_cgram_cache+$10
+    LDA $7EC034 : STA !ram_cgram_cache+$12
+    LDA $7EC036 : STA !ram_cgram_cache+$14
+    LDA $7EC03A : STA !ram_cgram_cache+$16
+    LDA $7EC03C : STA !ram_cgram_cache+$18
+    LDA $7EC03E : STA !ram_cgram_cache+$1A
 
     ; apply menu palettes
     LDA #$0000 : STA $7EC000
-    STA $7EC016 : STA $7EC00E ; background
+    STA $7EC016 : STA $7EC00E : STA $7EC01E ; background
     LDA #$7277 : STA $7EC00A ; border
     LDA #$48F3 : STA $7EC012 ; header outline
     LDA #$7FFF : STA $7EC014 ; text
@@ -256,7 +257,7 @@ cm_transfer_custom_cgram:
     LDA #$7FFF : STA $7EC01C ; number fill
     LDA #$4376 : STA $7EC032 ; toggle on
     LDA #$761F : STA $7EC034 ; selected text
-    LDA #$0000 : STA $7EC036 ; selected text background
+    LDA #$0000 : STA $7EC036 : STA $7EC03E ; selected text background
     LDA #$0000 : STA $7EC03A ; selected number outline
     LDA #$761F : STA $7EC03C ; selected number fill
 
@@ -276,11 +277,13 @@ cm_transfer_original_cgram:
     LDA !ram_cgram_cache+$08 : STA $7EC016
     LDA !ram_cgram_cache+$0A : STA $7EC01A
     LDA !ram_cgram_cache+$0C : STA $7EC01C
-    LDA !ram_cgram_cache+$0E : STA $7EC032
-    LDA !ram_cgram_cache+$10 : STA $7EC034
-    LDA !ram_cgram_cache+$12 : STA $7EC036
-    LDA !ram_cgram_cache+$14 : STA $7EC03A
-    LDA !ram_cgram_cache+$16 : STA $7EC03C
+    LDA !ram_cgram_cache+$0E : STA $7EC01E
+    LDA !ram_cgram_cache+$10 : STA $7EC032
+    LDA !ram_cgram_cache+$12 : STA $7EC034
+    LDA !ram_cgram_cache+$14 : STA $7EC036
+    LDA !ram_cgram_cache+$16 : STA $7EC03A
+    LDA !ram_cgram_cache+$18 : STA $7EC03C
+    LDA !ram_cgram_cache+$1A : STA $7EC03E
 
     JSL transfer_cgram_long
     PLP
@@ -449,20 +452,14 @@ cm_memory_editor:
     LDA !ram_mem_editor_active : BNE +
     RTS
 
-    ; assemble address word
-+   %a8()
-    LDA !ram_mem_address_hi : XBA : LDA !ram_mem_address_lo
-    %a16()
-    STA !ram_mem_address
-
     ; draw the address bank
-    LDA !ram_mem_address_bank : STA !DP_DrawValue
-    LDX #$044E : JSL cm_draw2_hex
++   LDA !ram_mem_address_bank : STA !DP_DrawValue
+    LDX #$03CE : JSL cm_draw2_hex
 
     ; draw the address word
     %a16()
     LDA !ram_mem_address : STA !DP_DrawValue
-    LDX #$0452 : JSL cm_draw4_hex
+    LDX #$03D2 : JSL cm_draw4_hex
 
     ; assemble indirect address
     LDA !ram_mem_address_bank : STA !DP_Address+2
@@ -473,47 +470,44 @@ cm_memory_editor:
     LDA !ram_mem_memory_size : BNE .eight_bit
 
     ; draw the 16-bit hex value at address
-    LDX #$042A : JSL cm_draw4_hex
-    LDX #$0468 : JSL cm_draw5
+    LDX #$03AA : JSL cm_draw4_hex
+    LDX #$03E8 : JSL cm_draw5
     BRA .labels
 
   .eight_bit
     ; draw the 8-bit hex value at address
     %a8()
-    LDX #$042A : JSL cm_draw2_hex
-    LDX #$0468 : JSL cm_draw3
+    LDX #$03AA : JSL cm_draw2_hex
+    LDX #$03E8 : JSL cm_draw3
 
   .labels
     ; bunch of $ symbols
-    LDA #$284E
+    LDA #'$'|$2800
     STA !ram_tilemap_buffer+$174 ; $Bank
-    STA !ram_tilemap_buffer+$1B4 ; $High
-    STA !ram_tilemap_buffer+$1F4 ; $Low
-    STA !ram_tilemap_buffer+$2F4 ; $High
-    STA !ram_tilemap_buffer+$334 ; $Low
-    STA !ram_tilemap_buffer+$428 ; $Value
-    STA !ram_tilemap_buffer+$44C ; $Address
+    STA !ram_tilemap_buffer+$1B0 ; $Addr
+    STA !ram_tilemap_buffer+$2B0 ; $Value
+    STA !ram_tilemap_buffer+$3A8 ; $Value
+    STA !ram_tilemap_buffer+$3CC ; $Address
 
     ; labeling for newbies
-    LDA #$2C01
-    STA !ram_tilemap_buffer+$40E ; B
-    STA !ram_tilemap_buffer+$410 ; B
-    LDA #$2C08 : STA !ram_tilemap_buffer+$414 ; I
-    LDA #$2C0B : STA !ram_tilemap_buffer+$416 ; L
-    LDA #$2C7D : STA !ram_tilemap_buffer+$418 ; O
-    LDA #$2C07 : STA !ram_tilemap_buffer+$412 ; H
+    LDA #'B'|$2C00
+    STA !ram_tilemap_buffer+$38E : STA !ram_tilemap_buffer+$390
+    LDA #'I'|$2C00 : STA !ram_tilemap_buffer+$394
+    LDA #'L'|$2C00 : STA !ram_tilemap_buffer+$396
+    LDA #'O'|$2C00 : STA !ram_tilemap_buffer+$398
+    LDA #'H'|$2C00 : STA !ram_tilemap_buffer+$392
 
     ; HEX and DEC labels
-    STA !ram_tilemap_buffer+$420 ; H
-    LDA #$2C04
-    STA !ram_tilemap_buffer+$422 ; E
-    STA !ram_tilemap_buffer+$462 ; E
-    LDA #$2C17 : STA !ram_tilemap_buffer+$424 ; X
-    LDA #$2C03 : STA !ram_tilemap_buffer+$460 ; D
-    LDA #$2C02 : STA !ram_tilemap_buffer+$464 ; C
+    STA !ram_tilemap_buffer+$3A0 ; H
+    LDA #'E'|$2C00
+    STA !ram_tilemap_buffer+$3A2 : STA !ram_tilemap_buffer+$3E2
+    LDA #'X'|$2C00 : STA !ram_tilemap_buffer+$3A4
+    LDA #'D'|$2C00 : STA !ram_tilemap_buffer+$3E0
+    LDA #'C'|$2C00 : STA !ram_tilemap_buffer+$3E4
 
     ; setup to draw $10 bytes of nearby RAM
     LDX #$0508
+    LDA !DP_Address : STA !DP_Temp
     %a8()
     LDA #$00 : STA !ram_mem_line_position : STA !ram_mem_loop_counter
     LDA !DP_Address : AND #$F0 : STA !DP_Address
@@ -522,9 +516,16 @@ cm_memory_editor:
     ; draw a byte
     LDA [!DP_Address] : STA !DP_DrawValue
     JSL cm_draw2_hex
-    INC !DP_Address
 
-    ; inc tilemap position
+    %a16()
+    LDA !DP_Address : CMP !DP_Temp : BNE +
+    ; highlight selected byte
+    LDA !ram_tilemap_buffer,X : ORA #$1000 : STA !ram_tilemap_buffer,X
+    LDA !ram_tilemap_buffer+2,X : ORA #$1000 : STA !ram_tilemap_buffer+2,X
+
+    ; inc address and tilemap position
++   %a8()
+    INC !DP_Address
     INX #6
     LDA !ram_mem_line_position : INC
     STA !ram_mem_line_position : AND #$08 : BEQ +
@@ -539,7 +540,7 @@ cm_memory_editor:
 
     ; inc bytes drawn
 +   LDA !ram_mem_loop_counter : INC : STA !ram_mem_loop_counter
-    CMP #$10 : BNE .drawNearbyMem
+    CMP #$20 : BNE .drawNearbyMem
     %a16()
 
   .doneNearbyMem
@@ -581,6 +582,7 @@ cm_draw_action_table:
     dw draw_numfield
     dw draw_numfield_hex
     dw draw_numfield_word
+    dw draw_numfield_hex_word
     dw draw_choice
     dw draw_controller_input
     dw draw_jsl
@@ -825,8 +827,7 @@ draw_numfield_word:
     LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : STA !DP_Address+2
 
     ; skip bounds and increment values
-    INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC !DP_CurrentMenu; : INC !DP_CurrentMenu
-    INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC !DP_CurrentMenu; : INC !DP_CurrentMenu
+    INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC !DP_CurrentMenu
 
     ; increment past JSL
     INC !DP_CurrentMenu : INC !DP_CurrentMenu
@@ -841,7 +842,7 @@ draw_numfield_word:
     ; convert value to decimal
     LDA [!DP_Address] : JSR cm_hex2dec
 
-    ; Clear out the area (black tile)
+    ; Clear out the area
     LDA !MENU_BLANK : STA !ram_tilemap_buffer+0,X
                       STA !ram_tilemap_buffer+2,X
                       STA !ram_tilemap_buffer+4,X
@@ -868,6 +869,54 @@ draw_numfield_word:
     CLC : ADC !DP_Palette : STA !ram_tilemap_buffer,X
 
   .done
+    RTS
+}
+
+draw_numfield_hex_word:
+{
+    ; grab the memory address (long)
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_Address
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : STA !DP_Address+2
+
+    ; skip bitmask and JSL address
+    INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC !DP_CurrentMenu
+
+    ; Draw the text
+    %item_index_to_vram_index()
+    PHX : JSR cm_draw_text : PLX
+
+    ; set position for the number
+    TXA : CLC : ADC #$002C : TAX
+
+    ; load the value
+    LDA [!DP_Address] : STA !DP_DrawValue
+
+    ; Clear out the area
+    LDA !MENU_BLANK : STA !ram_tilemap_buffer+0,X
+                      STA !ram_tilemap_buffer+2,X
+                      STA !ram_tilemap_buffer+4,X
+                      STA !ram_tilemap_buffer+6,X
+
+    ; Draw numbers
+    ; (X000)
+    LDA !DP_DrawValue : AND #$F000 : XBA : LSR #3 : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer,X
+    ; (0X00)
+    LDA !DP_DrawValue : AND #$0F00 : XBA : ASL : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+2,X
+    ; (00X0)
+    LDA !DP_DrawValue : AND #$00F0 : LSR #3 : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+4,X
+    ; (000X)
+    LDA !DP_DrawValue : AND #$000F : ASL : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+6,X
+
+    ; overwrite palette bytes
+    %a8()
+    LDA #$2C : ORA !DP_Palette
+    STA !ram_tilemap_buffer+1,X : STA !ram_tilemap_buffer+3,X
+    STA !ram_tilemap_buffer+5,X : STA !ram_tilemap_buffer+7,X
+    %a16()
     RTS
 }
 
@@ -997,12 +1046,15 @@ cm_loop:
     JSL $808F0C ; Music queue
     JSL $8289EF ; Sound fx queue
 
-    LDA !ram_cm_leave : BEQ .checkInputs
+    LDA !ram_cm_leave : BEQ +
     LDA #$0000 : STA !ram_mem_editor_active
     RTS ; Exit menu loop
 
-  .checkInputs
-    JSR cm_get_inputs : STA !ram_cm_controller : BEQ cm_loop
++   LDA !ram_cm_ctrl_mode : BEQ +
+    JSR cm_edit_digits
+    BRA cm_loop
+
++   JSR cm_get_inputs : STA !ram_cm_controller : BEQ cm_loop
 
 ;    BIT #$0040 : BNE .pressedX
     BIT !CTRL_A : BEQ + : JMP .pressedA ; more wiggle room with branch limits...
@@ -1067,8 +1119,7 @@ cm_loop:
 cm_previous_menu:
 {
     JSL cm_go_back
-    JSL cm_calculate_max
-    RTL
+    JML cm_calculate_max
 }
 
 cm_go_back:
@@ -1243,6 +1294,7 @@ cm_execute_action_table:
     dw execute_numfield
     dw execute_numfield_hex
     dw execute_numfield_word
+    dw execute_numfield_hex_word
     dw execute_choice
     dw execute_controller_input
     dw execute_jsl
@@ -1394,69 +1446,45 @@ execute_numfield_hex:
 execute_numfield_word:
 {
     ; grab the memory address (long)
-    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_Address
-    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : STA !DP_Address+2
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_DigitAddress
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : STA !DP_DigitAddress+2
 
-    ; grab minimum (!DP_Minimum) and maximum (!DP_Maximum) values
-    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_Minimum
-    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC : STA !DP_Maximum ; INC for convenience
+    ; grab minimum (!DP_DigitMinimum) and maximum (!DP_DigitMaximum) values
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_DigitMinimum
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : INC : STA !DP_DigitMaximum ; INC for convenience
 
-    ; grab normal increment
-    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_Increment
+    ; check if maximum requires 3 digits or 4
+    CMP #1000 : BPL +
+    LDA !ram_cm_horizontal_cursor : CMP #$0003 : BNE +
+    LDA #$0002 : STA !ram_cm_horizontal_cursor
 
-    ; check if fast scroll button (Y) is held
-    LDA !CONTROLLER_PRI : AND !CTRL_Y : BEQ +
-    ; 4x scroll speed if held
-    LDA !DP_Increment : ASL #2 : STA !DP_Increment
+    ; grab JSL address
++   LDA [!DP_CurrentMenu] : STA !DP_JSLTarget
 
-; "hold dpad to fast-scroll" is disabled here
-;    ; check for held inputs
-;    LDA !ram_cm_controller : BIT !IH_INPUT_HELD : BNE .input_held
-;    ; grab normal increment and skip past both
-;    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu; : AND #$00FF : STA !DP_Increment
-;    BRA .load_jsl_target
-
-;  .input_held
-;    ; grab faster increment and skip past both
-;    INC !DP_CurrentMenu : LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : AND #$00FF : STA !DP_Increment
-
-  .load_jsl_target
-+   LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_JSLTarget
-
-    ; determine dpad direction
-    LDA !ram_cm_controller : BIT #$0200 : BNE .pressed_left
-    ; pressed right, inc
-    LDA [!DP_Address] : CLC : ADC !DP_Increment
-    CMP !DP_Maximum : BCS .set_to_min
-    STA [!DP_Address] : BRA .jsl
-
-  .pressed_left ; dec
-    LDA [!DP_Address] : SEC : SBC !DP_Increment
-    CMP !DP_Minimum : BMI .set_to_max
-    CMP !DP_Maximum : BCS .set_to_max
-    STA [!DP_Address] : BRA .jsl
-
-  .set_to_min
-    LDA !DP_Minimum : STA [!DP_Address] : CLC : BRA .jsl
-
-  .set_to_max
-    LDA !DP_Maximum : DEC : STA [!DP_Address]
-
-  .jsl
-    ; skip if JSL target is zero
-    LDA !DP_JSLTarget : BEQ .end
-
-    ; Set return address for indirect JSL
-    LDA !ram_cm_menu_bank : STA !DP_JSLTarget+2
-    PHK : PEA .end-1
-
-    ; addr in A
-    LDA [!DP_Address] : LDX #$0000
-    JML.w [!DP_JSLTarget]
-
-  .end
-    %ai16()
+    LDA [!DP_DigitAddress] : STA !DP_DigitValue
+    LDA #$8001 : STA !ram_cm_ctrl_mode
     %sfxnumber()
+
+    RTS
+}
+
+execute_numfield_hex_word:
+{
+    ; grab the memory address (long)
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_DigitAddress
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : STA !DP_DigitAddress+2
+
+    ; grab maximum bitmask
+    LDA [!DP_CurrentMenu] : INC !DP_CurrentMenu : INC !DP_CurrentMenu : STA !DP_DigitMaximum
+
+    ; grab JSL address
+    LDA [!DP_CurrentMenu] : STA !DP_JSLTarget
+
+    ; enable single digit numfield editing
+    LDA #$FFFF : STA !ram_cm_ctrl_mode
+    %sfxnumber()
+
+  .done
     RTS
 }
 
@@ -1643,9 +1671,8 @@ execute_numfield_sound:
     %a8() : STA [!DP_Address] : BRA .jsl
 
   .pressed_left ; dec
-    LDA [!DP_Address] : SEC : SBC !DP_Increment
-    CMP !DP_Minimum : BMI .set_to_max
-    CMP !DP_Maximum : BCS .set_to_max
+    LDA [!DP_Address] : SEC : SBC !DP_Increment : BMI .set_to_max
+    CMP !DP_Minimum : BCC .set_to_max
     %a8() : STA [!DP_Address] : BRA .jsl
 
   .set_to_min
@@ -1701,8 +1728,8 @@ cm_hex2dec:
     PEA $0000 : PLA ; wait for math
 
     ; store result and remainder, divide the rest
-    LDA $4214 : STA !DP_SecondDigit
-    LDA $4216 : STA !DP_ThirdDigit
+    LDA $4214 : STA !DP_SecondDigit ; tens
+    LDA $4216 : STA !DP_ThirdDigit ; ones
     LDA !DP_Temp : STA $4204
 
     %a8()
@@ -1713,23 +1740,44 @@ cm_hex2dec:
     PEA $0000 : PLA ; wait for math
 
     ; store result and remainder
-    LDA $4214 : STA !DP_Temp
-    LDA $4216 : STA !DP_FirstDigit
+    LDA $4214 : STA !DP_Temp ; thousands
+    LDA $4216 : STA !DP_FirstDigit ; hundreds
 
+    RTS
+}
+
+cm_reverse_hex2dec:
+{
+; Reconstructs a 16bit decimal number from individual digit values
+    LDA !DP_Temp
+    %ai8()
+    STA $211B : XBA : STA $211B ; Thousands
+    LDY #$0A : STY $211C ; multiply by 10
+    %a16()
+    LDA $2134 : CLC : ADC !DP_FirstDigit ; add Hundreds
+    %a8()
+    STA $211B : XBA : STA $211B
+    STY $211C ; multiply by 10
+    %a16()
+    LDA $2134 : CLC : ADC !DP_SecondDigit ; add Tens
+    %a8()
+    STA $211B : XBA : STA $211B 
+    STY $211C ; multiply by 10
+    %ai16()
+    LDA $2134 : CLC : ADC !DP_ThirdDigit : STA !DP_DigitValue ; add Ones
     RTS
 }
 
 cm_draw2_hex:
 {
     PHP : %a16()
-    PHB : PHK : PLB
     ; (00X0)
     LDA !DP_DrawValue : AND #$00F0 : LSR #3 : TAY
     LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer,X
     ; (000X)
     LDA !DP_DrawValue : AND #$000F : ASL : TAY
     LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+2,X
-    PLB : PLP
+    PLP
     RTL
 }
 
@@ -1738,7 +1786,6 @@ cm_draw3:
 ; expects value to be drawn in !DP_DrawValue
 ; expects tilemap pointer in X
 {
-    PHB
     LDA !DP_DrawValue : STA $4204
     %a8()
     LDA #$0A : STA $4206 ; divide by 10
@@ -1767,7 +1814,6 @@ cm_draw3:
     LDA.w DecMenuGFXTable,Y : STA !ram_tilemap_buffer,X
 
   .done
-    PLB
     INX #6
     RTL
 
@@ -1784,7 +1830,6 @@ cm_draw3:
 cm_draw4_hex:
 {
     PHP : %a16()
-    PHB : PHK : PLB
     ; (X000)
     LDA !DP_DrawValue : AND #$F000 : XBA : LSR #3 : TAY
     LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer,X
@@ -1797,7 +1842,7 @@ cm_draw4_hex:
     ; (000X)
     LDA !DP_DrawValue : AND #$000F : ASL : TAY
     LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+6,X
-    PLB : PLP
+    PLP
     RTL
 }
 
@@ -1806,7 +1851,6 @@ cm_draw5:
 ; expects value to be drawn in !DP_DrawValue
 ; expects tilemap pointer in X
 {
-    PHB
     LDA !DP_DrawValue : STA $4204
     %a8()
     LDA #$0A : STA $4206 ; divide by 10
@@ -1862,7 +1906,6 @@ cm_draw5:
     LDA.w DecMenuGFXTable,Y : STA !ram_tilemap_buffer,X
 
   .done
-    PLB
     INX #10
     RTL
 
@@ -1887,136 +1930,287 @@ cm_draw5:
     BRA .done
 }
 
-SetupEquipmentMenus:
-; Setup initial values for dummy equipment addresses
+cm_edit_digits:
 {
-    LDA !SAMUS_ITEMS_COLLECTED : BIT #$0001 : BEQ .noVaria
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0001 : BNE .equipVaria
-    ; unequip Varia
-    LDA #$0002 : STA !ram_cm_varia : BRA +
-  .equipVaria
-    LDA #$0001 : STA !ram_cm_varia : BRA +
-  .noVaria
-    LDA #$0000 : STA !ram_cm_varia
+    ; hex or decimal
+    LDA !ram_cm_ctrl_mode : CMP #$8001 : BEQ .decimal_mode
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0020 : BEQ .noGravity
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0020 : BNE .equipGravity
-    ; unequip Gravity
-    LDA #$0002 : STA !ram_cm_gravity : BRA +
-  .equipGravity
-    LDA #$0001 : STA !ram_cm_gravity : BRA +
-  .noGravity
-    LDA #$0000 : STA !ram_cm_gravity
+    ; check for A, B, and D-pad
+    JSR cm_get_inputs : STA !ram_cm_controller
+    AND #$8F80 : BEQ .redraw
+    BIT !IH_INPUT_LEFTRIGHT : BNE .selecting
+    BIT !IH_INPUT_UPDOWN : BNE .editing
+    BIT #$8080 : BEQ .redraw
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0004 : BEQ .noMorph
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0004 : BNE .equipMorph
-    ; unequip Morph
-    LDA #$0002 : STA !ram_cm_morph : BRA +
-  .equipMorph
-    LDA #$0001 : STA !ram_cm_morph : BRA +
-  .noMorph
-    LDA #$0000 : STA !ram_cm_morph
+    ; exit if A or B pressed
+    ; skip if JSL target is zero
+    LDA !DP_JSLTarget : BEQ .end
+    ; Set return address for indirect JSL
+    LDA !ram_cm_menu_bank : STA !DP_JSLTarget+2
+    PHK : PEA .end-1
+    ; addr in A
+    LDA [!DP_DigitAddress] : LDX #$0000
+    JML.w [!DP_JSLTarget]
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$1000 : BEQ .noBombs
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$1000 : BNE .equipBombs
-    ; unequip Bombs
-    LDA #$0002 : STA !ram_cm_bombs : BRA +
-  .equipBombs
-    LDA #$0001 : STA !ram_cm_bombs : BRA +
-  .noBombs
-    LDA #$0000 : STA !ram_cm_bombs
+  .end
+    %ai16()
+    LDA #$0000 : STA !ram_cm_ctrl_mode
+    %sfxconfirm()
+    JSL cm_draw
+    RTS
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0002 : BEQ .noSpring
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0002 : BNE .equipSpring
-    ; unequip Spring
-    LDA #$0002 : STA !ram_cm_spring : BRA +
-  .equipSpring
-    LDA #$0001 : STA !ram_cm_spring : BRA +
-  .noSpring
-    LDA #$0000 : STA !ram_cm_spring
+  .decimal_mode
+    JMP cm_edit_decimal_digits
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0008 : BEQ .noScrew
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0008 : BNE .equipScrew
-    ; unequip Screw
-    LDA #$0002 : STA !ram_cm_screw : BRA +
-  .equipScrew
-    LDA #$0001 : STA !ram_cm_screw : BRA +
-  .noScrew
-    LDA #$0000 : STA !ram_cm_screw
+  .selecting
+    %sfxmove()
+    ; determine which direction was pressed
+    LDA !ram_cm_controller : BIT !IH_INPUT_LEFT : BNE .left
+    ; inc/dec horizontal cursor index
+    LDA !ram_cm_horizontal_cursor : DEC : AND #$0003 : STA !ram_cm_horizontal_cursor
+    BRA .redraw
+  .left
+    LDA !ram_cm_horizontal_cursor : INC : AND #$0003 : STA !ram_cm_horizontal_cursor
+  .redraw
+    ; redraw numbers so selected digit is highlighted
+    LDA !ram_cm_stack_index : TAX
+    LDA !ram_cm_cursor_stack,X : TAY
+    %item_index_to_vram_index()
+    TXA : CLC : ADC #$002C : TAX
+    LDA [!DP_DigitAddress]
+    JMP cm_draw4_editing ; and return from there
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0100 : BEQ .noHiJump
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0100 : BNE .equipHiJump
-    ; unequip HiJump
-    LDA #$0002 : STA !ram_cm_hijump : BRA +
-  .equipHiJump
-    LDA #$0001 : STA !ram_cm_hijump : BRA +
-  .noHiJump
-    LDA #$0000 : STA !ram_cm_hijump
+  .editing
+    ; use horizontal cursor index to ADC/SBC
+    LDA !ram_cm_horizontal_cursor : ASL : TAX
+    ; determine which direction was pressed
+    LDA !CONTROLLER_PRI : BIT !IH_INPUT_UP : BNE +
+    TXA : CLC : ADC #$0008 : TAX
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0200 : BEQ .noSpace
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0200 : BNE .equipSpace
-    ; unequip Space
-    LDA #$0002 : STA !ram_cm_space : BRA +
-  .equipSpace
-    LDA #$0001 : STA !ram_cm_space : BRA +
-  .noSpace
-    LDA #$0000 : STA !ram_cm_space
+    ; subroutine to inc/dec digit
++   LDA [!DP_DigitAddress] : JSR (cm_SingleDigitEdit,X)
+    ; returns full value with selected digit cleared
+    ; combine with modified digit and cap with bitmask in !DP_DigitMaximum
+    ORA !DP_DigitValue : AND !DP_DigitMaximum : STA [!DP_DigitAddress]
+    %sfxnumber()
 
-+   LDA !SAMUS_ITEMS_COLLECTED : BIT #$2000 : BEQ .noSpeed
-    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$2000 : BNE .equipSpeed
-    ; unequip Speed
-    LDA #$0002 : STA !ram_cm_speed : BRA +
-  .equipSpeed
-    LDA #$0001 : STA !ram_cm_speed : BRA +
-  .noSpeed
-    LDA #$0000 : STA !ram_cm_speed
+    ; redraw numbers
+    LDA !ram_cm_stack_index : TAX
+    LDA !ram_cm_cursor_stack,X : TAY
+    %item_index_to_vram_index()
+    TXA : CLC : ADC #$002C : TAX
+    LDA [!DP_DigitAddress]
 
-+   LDA !SAMUS_BEAMS_COLLECTED : BIT #$1000 : BEQ .noCharge
-    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$1000 : BNE .equipCharge
-    ; unequip Charge
-    LDA #$0002 : STA !ram_cm_charge : BRA +
-  .equipCharge
-    LDA #$0001 : STA !ram_cm_charge : BRA +
-  .noCharge
-    LDA #$0000 : STA !ram_cm_charge
+    ; fallthrough to cm_draw4_editing and return from there
+}
 
-+   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0002 : BEQ .noIce
-    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0002 : BNE .equipIce
-    ; unequip Ice
-    LDA #$0002 : STA !ram_cm_ice : BRA +
-  .equipIce
-    LDA #$0001 : STA !ram_cm_ice : BRA +
-  .noIce
-    LDA #$0000 : STA !ram_cm_ice
+cm_draw4_editing:
+{
+    ; (X000)
+    STA !DP_DrawValue : AND #$F000 : XBA : LSR #3 : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer,X
+    ; (0X00)
+    LDA !DP_DrawValue : AND #$0F00 : XBA : ASL : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+2,X
+    ; (00X0)
+    LDA !DP_DrawValue : AND #$00F0 : LSR #3 : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+4,X
+    ; (000X)
+    LDA !DP_DrawValue : AND #$000F : ASL : TAY
+    LDA.w HexMenuGFXTable,Y : STA !ram_tilemap_buffer+6,X
 
-+   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0001 : BEQ .noWave
-    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0001 : BNE .equipWave
-    ; unequip Wave
-    LDA #$0002 : STA !ram_cm_wave : BRA +
-  .equipWave
-    LDA #$0001 : STA !ram_cm_wave : BRA +
-  .noWave
-    LDA #$0000 : STA !ram_cm_wave
+    ; set palette bytes to unselected
+    %a8()
+    LDA #$2C
+    STA !ram_tilemap_buffer+1,X : STA !ram_tilemap_buffer+3,X
+    STA !ram_tilemap_buffer+5,X : STA !ram_tilemap_buffer+7,X
 
-+   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0004 : BEQ .noSpazer
-    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0004 : BNE .equipSpazer
-    ; unequip Spazer
-    LDA #$0002 : STA !ram_cm_spazer : BRA +
-  .equipSpazer
-    LDA #$0001 : STA !ram_cm_spazer : BRA +
-  .noSpazer
-    LDA #$0000 : STA !ram_cm_spazer
+    ; highlight selected digit only
+    LDA !ram_cm_horizontal_cursor : BEQ .ones
+    DEC : BEQ .tens
+    DEC : BEQ .hundreds
+    ; thousands $X000
+    LDA #$3C : STA !ram_tilemap_buffer+1,X
+    BRA .done
+  .hundreds ; $0X00
+    LDA #$3C : STA !ram_tilemap_buffer+3,X
+    BRA .done
+  .tens ; $00X0
+    LDA #$3C : STA !ram_tilemap_buffer+5,X
+    BRA .done
+  .ones ; $000X
+    LDA #$3C : STA !ram_tilemap_buffer+7,X
 
-+   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0008 : BEQ .noPlasma
-    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0008 : BNE .equipPlasma
-    ; unequip Plasma
-    LDA #$0002 : STA !ram_cm_plasma : BRA +
-  .equipPlasma
-    LDA #$0001 : STA !ram_cm_plasma : BRA +
-  .noPlasma
-    LDA #$0000 : STA !ram_cm_plasma
+  .done
+    %a16()
+    JSR cm_tilemap_transfer
+    RTS
+}
 
-+   RTL
+cm_SingleDigitEdit:
+    dw #cm_SDE_add_ones
+    dw #cm_SDE_add_tens
+    dw #cm_SDE_add_hundreds
+    dw #cm_SDE_add_thousands
+    dw #cm_SDE_sub_ones
+    dw #cm_SDE_sub_tens
+    dw #cm_SDE_sub_hundreds
+    dw #cm_SDE_sub_thousands
+
+    %SDE_add(ones, #$0001, #$000F, #$FFF0)
+    %SDE_add(tens, #$0010, #$00F0, #$FF0F)
+    %SDE_add(hundreds, #$0100, #$0F00, #$F0FF)
+    %SDE_add(thousands, #$1000, #$F000, #$0FFF)
+    %SDE_sub(ones, #$0001, #$000F, #$FFF0)
+    %SDE_sub(tens, #$0010, #$00F0, #$FF0F)
+    %SDE_sub(hundreds, #$0100, #$0F00, #$F0FF)
+    %SDE_sub(thousands, #$1000, #$F000, #$0FFF)
+
+cm_edit_decimal_digits:
+{
+    ; check for A, B, and D-pad
+    JSR cm_get_inputs : STA !ram_cm_controller
+    AND #$8F80 : BEQ .redraw
+    BIT !IH_INPUT_LEFTRIGHT : BNE .selecting
+    BIT !IH_INPUT_UPDOWN : BNE .editing
+    BIT #$8080 : BEQ .redraw
+
+    ; exit if A or B pressed
+    BRL .exit
+
+  .selecting
+    %sfxmove()
+    ; determine which direction was pressed
+    LDA !ram_cm_controller : BIT !IH_INPUT_LEFT : BNE .left
+    ; inc/dec horizontal cursor index
+    LDA !ram_cm_horizontal_cursor : DEC : AND #$0003 : STA !ram_cm_horizontal_cursor
+    CMP #$0003 : BNE .redraw
+    ; is editing thousands digit allowed?
+    LDA !DP_DigitMaximum : CMP #1000 : BPL .redraw
+    ; limit cursor to 3 positions (0-2)
+    LDA #$0002 : STA !ram_cm_horizontal_cursor
+    BRL .draw
+  .left
+    LDA !ram_cm_horizontal_cursor : INC : AND #$0003 : STA !ram_cm_horizontal_cursor
+    CMP #$0003 : BNE .redraw
+    ; is editing thousands digit allowed?
+    LDA !DP_DigitMaximum : CMP #1000 : BPL .redraw
+    ; limit cursor to 3 positions (0-2)
+    LDA #$0000 : STA !ram_cm_horizontal_cursor
+
+  .redraw
+    BRL .draw
+
+  .editing
+    ; convert value to decimal
+    LDA !DP_DigitValue : JSR cm_hex2dec
+
+    ; determine which digit to edit
+    LDA !ram_cm_horizontal_cursor : BEQ .ones
+    DEC : BEQ .tens
+    DEC : BEQ .hundreds
+
+    %SDE_dec(thousands, !DP_Temp)
+    BRA .dec2hex
+  .hundreds
+    %SDE_dec(hundreds, !DP_FirstDigit)
+    BRA .dec2hex
+  .tens
+    %SDE_dec(tens, !DP_SecondDigit)
+    BRA .dec2hex
+  .ones
+    %SDE_dec(ones, !DP_ThirdDigit)
+
+  .dec2hex
+    %sfxnumber()
+    JSR cm_reverse_hex2dec
+
+  .draw
+    ; convert value to decimal
+    LDA !DP_DigitValue : JSR cm_hex2dec
+
+    ; get tilemap address
+    LDA !ram_cm_stack_index : TAX
+    LDA !ram_cm_cursor_stack,X : TAY
+    %item_index_to_vram_index()
+    TXA : CLC : ADC #$002C : TAX
+
+    ; is editing thousands digit allowed?
+    LDA #$2C70
+    LDY !DP_DigitMaximum : CPY #1000 : BMI +
+
+    ; start with zero tiles
+    STA !ram_tilemap_buffer+0,X
++   STA !ram_tilemap_buffer+2,X
+    STA !ram_tilemap_buffer+4,X
+    STA !ram_tilemap_buffer+6,X
+
+    ; set palette and default zero tile
+    ; number tiles are 70-79
+    STA !DP_Palette
+
+    ; Draw numbers
+    ; ones
+    LDA !DP_ThirdDigit : CLC : ADC !DP_Palette : STA !ram_tilemap_buffer+6,X
+    ; tens
+    LDA !DP_SecondDigit : ORA !DP_FirstDigit
+    ORA !DP_Temp : BEQ .highlighting
+    LDA !DP_SecondDigit : CLC : ADC !DP_Palette : STA !ram_tilemap_buffer+4,X
+    ; hundreds
+    LDA !DP_FirstDigit : ORA !DP_Temp : BEQ .highlighting
+    LDA !DP_FirstDigit : CLC : ADC !DP_Palette : STA !ram_tilemap_buffer+2,X
+    ; thousands
+    LDA !DP_Temp : BEQ .highlighting
+    CLC : ADC !DP_Palette : STA !ram_tilemap_buffer,X
+
+  .highlighting
+    ; highlight the selected tile
+    %a8()
+    LDA !ram_cm_horizontal_cursor : BEQ .highlight_ones
+    DEC : BEQ .highlight_tens
+    DEC : BEQ .highlight_hundreds
+    ; thousands $X000
+    LDA #$3C : STA !ram_tilemap_buffer+1,X
+    BRA .done
+  .highlight_hundreds ; $0X00
+    LDA #$3C : STA !ram_tilemap_buffer+3,X
+    BRA .done
+  .highlight_tens ; $00X0
+    LDA #$3C : STA !ram_tilemap_buffer+5,X
+    BRA .done
+  .highlight_ones ; $000X
+    LDA #$3C : STA !ram_tilemap_buffer+7,X
+
+  .done
+    %a16()
+    JSR cm_tilemap_transfer
+    RTS
+
+  .exit
+    ; check if value is inbounds
+    LDA !DP_DigitValue : CMP !DP_DigitMaximum : BMI .check_minimum
+    LDA !DP_DigitMaximum : DEC : BRA + ; was max+1 for convenience
+
+  .check_minimum
+    CMP !DP_DigitMinimum : BPL +
+    LDA !DP_DigitMinimum
++   STA [!DP_DigitAddress]
+
+    ; skip if JSL target is zero
+    LDA !DP_JSLTarget : BEQ .end
+    ; Set return address for indirect JSL
+    LDA !ram_cm_menu_bank : STA !DP_JSLTarget+2
+    PHK : PEA .end-1
+    ; addr in A
+    LDA [!DP_DigitAddress]
+    JML.w [!DP_JSLTarget]
+
+  .end
+    %ai16()
+    %sfxconfirm()
+    LDA #$0000 : STA !ram_cm_ctrl_mode
+    JSL cm_draw
+    RTS
 }
 
 HexMenuGFXTable:

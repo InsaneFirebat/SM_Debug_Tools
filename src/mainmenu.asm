@@ -94,7 +94,7 @@
 ; THIS IS NOT A MACRO! You must write the required data manually
 ;example_label:
 ;    dw !ACTION_CHOICE                ; starts with the action index
-;    dl #$7E0000+!SAMUS_RESERVE_MODE  ; a 24-bit address to edit
+;    dl #!SAMUS_RESERVE_MODE          ; a 24-bit address to edit
 ;    dw #.routine                     ; optional 16-bit pointer to code, set to zero to skip, return with RTL
 ;    db #$28, "Reserve Mode", #$FF    ; an 8-bit palette/attribute byte, a title string up to 15 characters, and an FF terminator byte
 ;    db #$28, " UNOBTAINED", #$FF     ; an 8-bit palette/attribute byte, an option string exactly 11 characters long, and an FF terminator byte
@@ -158,17 +158,13 @@ mm_goto_memoryeditor:
     ; Setup for special Memory Editor menu
     LDA #$0001 : STA !ram_mem_editor_active
 
-    ; split address hi and lo
-    LDA !ram_mem_address
-    %a8()
-    STA !ram_mem_address_lo : XBA : STA !ram_mem_address_hi
-    %a16()
-    PHY ; preserve menu pointer in Y
+    ; preserve menu pointer in Y
+    PHY
 
     ; clear tilemap
     JSL cm_tilemap_bg
 
-    ; Set bank of new menu for manu submenu jump
+    ; Set bank of new menu for manual submenu jump
     LDA.w #MemoryEditorMenu>>16 : STA !ram_cm_menu_bank
     STA !DP_MenuIndices+2 : STA !DP_CurrentMenu+2
 
@@ -223,13 +219,13 @@ eq_toggle_category:
     %cm_submenu("Category Loadouts", #ToggleCategoryMenu)
 
 eq_goto_toggleitems:
-    %cm_submenu("Toggle Items", #ToggleItemsMenu)
+    %cm_jsl("Toggle Items", #eq_prepare_items_menu, #ToggleItemsMenu)
 
 eq_goto_togglebeams:
-    %cm_submenu("Toggle Beams", #ToggleBeamsMenu)
+    %cm_jsl("Toggle Beams", #eq_prepare_beams_menu, #ToggleBeamsMenu)
 
 eq_currentenergy:
-    %cm_numfield_word("Current Energy", $7E0000+!SAMUS_HP, 0, 1499, 1, 20, #0)
+    %cm_numfield_word("Current Energy", !SAMUS_HP, 0, 1499, #0)
 
 eq_setetanks:
     %cm_numfield("Energy Tanks", !ram_cm_etanks, 0, 14, 1, 1, .routine)
@@ -248,7 +244,7 @@ eq_setetanks:
     RTL
 
 eq_currentreserves:
-    %cm_numfield_word("Current Reserves", $7E09D6, 0, 400, 1, 20, #0)
+    %cm_numfield_word("Current Reserves", !SAMUS_RESERVE_ENERGY, 0, 400, #0)
 
 eq_setreserves:
     %cm_numfield("Reserve Tanks", !ram_cm_reserve, 0, 4, 1, 1, .routine)
@@ -268,7 +264,7 @@ eq_setreserves:
 
 eq_reservemode:
     dw !ACTION_CHOICE
-    dl #$7E0000+!SAMUS_RESERVE_MODE
+    dl #!SAMUS_RESERVE_MODE
     dw #.routine
     db #$28, "Reserve Mode", #$FF
     db #$28, " UNOBTAINED", #$FF
@@ -283,31 +279,174 @@ eq_reservemode:
 +   RTL
 
 eq_currentmissiles:
-    %cm_numfield_word("Current Missiles", $7E09C6, 0, 230, 1, 20, #0)
+    %cm_numfield_word("Current Missiles", !SAMUS_MISSILES, 0, 230, #0)
 
 eq_setmissiles:
-    %cm_numfield_word("Max Missiles", $7E09C8, 0, 230, 5, 20, .routine)
+    %cm_numfield_word("Max Missiles", !SAMUS_MISSILES_MAX, 0, 230, .routine)
     .routine
         LDA !SAMUS_MISSILES_MAX : STA !SAMUS_MISSILES
         RTL
 
 eq_currentsupers:
-    %cm_numfield("Current Super Missiles", $7E09CA, 0, 50, 1, 5, #0)
+    %cm_numfield("Current Super Missiles", !SAMUS_SUPERS, 0, 50, 1, 5, #0)
 
 eq_setsupers:
-    %cm_numfield("Max Super Missiles", $7E09CC, 0, 50, 5, 5, .routine)
+    %cm_numfield("Max Super Missiles", !SAMUS_SUPERS_MAX, 0, 50, 5, 5, .routine)
     .routine
         LDA !SAMUS_SUPERS_MAX : STA !SAMUS_SUPERS
         RTL
 
 eq_currentpbs:
-    %cm_numfield("Current Power Bombs", $7E09CE, 0, 50, 1, 5, #0)
+    %cm_numfield("Current Power Bombs", !SAMUS_PBS, 0, 50, 1, 5, #0)
 
 eq_setpbs:
-    %cm_numfield("Max Power Bombs", $7E09D0, 0, 50, 5, 5, .routine)
+    %cm_numfield("Max Power Bombs", !SAMUS_PBS_MAX, 0, 50, 5, 5, .routine)
     .routine
         LDA !SAMUS_PBS_MAX : STA !SAMUS_PBS
         RTL
+
+eq_prepare_items_menu:
+; Setup initial values for dummy equipment addresses
+{
+    LDA !SAMUS_ITEMS_COLLECTED : BIT #$0001 : BEQ .noVaria
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0001 : BNE .equipVaria
+    ; unequip Varia
+    LDA #$0002 : STA !ram_cm_varia : BRA +
+  .equipVaria
+    LDA #$0001 : STA !ram_cm_varia : BRA +
+  .noVaria
+    LDA #$0000 : STA !ram_cm_varia
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0020 : BEQ .noGravity
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0020 : BNE .equipGravity
+    ; unequip Gravity
+    LDA #$0002 : STA !ram_cm_gravity : BRA +
+  .equipGravity
+    LDA #$0001 : STA !ram_cm_gravity : BRA +
+  .noGravity
+    LDA #$0000 : STA !ram_cm_gravity
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0004 : BEQ .noMorph
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0004 : BNE .equipMorph
+    ; unequip Morph
+    LDA #$0002 : STA !ram_cm_morph : BRA +
+  .equipMorph
+    LDA #$0001 : STA !ram_cm_morph : BRA +
+  .noMorph
+    LDA #$0000 : STA !ram_cm_morph
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$1000 : BEQ .noBombs
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$1000 : BNE .equipBombs
+    ; unequip Bombs
+    LDA #$0002 : STA !ram_cm_bombs : BRA +
+  .equipBombs
+    LDA #$0001 : STA !ram_cm_bombs : BRA +
+  .noBombs
+    LDA #$0000 : STA !ram_cm_bombs
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0002 : BEQ .noSpring
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0002 : BNE .equipSpring
+    ; unequip Spring
+    LDA #$0002 : STA !ram_cm_spring : BRA +
+  .equipSpring
+    LDA #$0001 : STA !ram_cm_spring : BRA +
+  .noSpring
+    LDA #$0000 : STA !ram_cm_spring
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0008 : BEQ .noScrew
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0008 : BNE .equipScrew
+    ; unequip Screw
+    LDA #$0002 : STA !ram_cm_screw : BRA +
+  .equipScrew
+    LDA #$0001 : STA !ram_cm_screw : BRA +
+  .noScrew
+    LDA #$0000 : STA !ram_cm_screw
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0100 : BEQ .noHiJump
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0100 : BNE .equipHiJump
+    ; unequip HiJump
+    LDA #$0002 : STA !ram_cm_hijump : BRA +
+  .equipHiJump
+    LDA #$0001 : STA !ram_cm_hijump : BRA +
+  .noHiJump
+    LDA #$0000 : STA !ram_cm_hijump
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$0200 : BEQ .noSpace
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$0200 : BNE .equipSpace
+    ; unequip Space
+    LDA #$0002 : STA !ram_cm_space : BRA +
+  .equipSpace
+    LDA #$0001 : STA !ram_cm_space : BRA +
+  .noSpace
+    LDA #$0000 : STA !ram_cm_space
+
++   LDA !SAMUS_ITEMS_COLLECTED : BIT #$2000 : BEQ .noSpeed
+    LDA !SAMUS_ITEMS_EQUIPPED : BIT #$2000 : BNE .equipSpeed
+    ; unequip Speed
+    LDA #$0002 : STA !ram_cm_speed : BRA +
+  .equipSpeed
+    LDA #$0001 : STA !ram_cm_speed : BRA +
+  .noSpeed
+    LDA #$0000 : STA !ram_cm_speed
+
+    ; set bank for manual submenu jump
++   PHK : PHK : PLA
+    STA !ram_cm_menu_bank
+    JML action_submenu
+}
+
+eq_prepare_beams_menu:
+{
++   LDA !SAMUS_BEAMS_COLLECTED : BIT #$1000 : BEQ .noCharge
+    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$1000 : BNE .equipCharge
+    ; unequip Charge
+    LDA #$0002 : STA !ram_cm_charge : BRA +
+  .equipCharge
+    LDA #$0001 : STA !ram_cm_charge : BRA +
+  .noCharge
+    LDA #$0000 : STA !ram_cm_charge
+
++   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0002 : BEQ .noIce
+    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0002 : BNE .equipIce
+    ; unequip Ice
+    LDA #$0002 : STA !ram_cm_ice : BRA +
+  .equipIce
+    LDA #$0001 : STA !ram_cm_ice : BRA +
+  .noIce
+    LDA #$0000 : STA !ram_cm_ice
+
++   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0001 : BEQ .noWave
+    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0001 : BNE .equipWave
+    ; unequip Wave
+    LDA #$0002 : STA !ram_cm_wave : BRA +
+  .equipWave
+    LDA #$0001 : STA !ram_cm_wave : BRA +
+  .noWave
+    LDA #$0000 : STA !ram_cm_wave
+
++   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0004 : BEQ .noSpazer
+    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0004 : BNE .equipSpazer
+    ; unequip Spazer
+    LDA #$0002 : STA !ram_cm_spazer : BRA +
+  .equipSpazer
+    LDA #$0001 : STA !ram_cm_spazer : BRA +
+  .noSpazer
+    LDA #$0000 : STA !ram_cm_spazer
+
++   LDA !SAMUS_BEAMS_COLLECTED : BIT #$0008 : BEQ .noPlasma
+    LDA !SAMUS_BEAMS_EQUIPPED : BIT #$0008 : BNE .equipPlasma
+    ; unequip Plasma
+    LDA #$0002 : STA !ram_cm_plasma : BRA +
+  .equipPlasma
+    LDA #$0001 : STA !ram_cm_plasma : BRA +
+  .noPlasma
+    LDA #$0000 : STA !ram_cm_plasma
+
+    ; set bank for manual submenu jump
++   PHK : PHK : PLA
+    STA !ram_cm_menu_bank
+    JML action_submenu
+}
 
 
 ; ---------------------
@@ -456,13 +595,13 @@ ti_speedbooster:
     %cm_equipment_item("Speed Booster", !ram_cm_speed, #$2000, #$DFFF)
 
 ti_grapple:
-    %cm_toggle_bit("Grapple", $7E0000+!SAMUS_ITEMS_COLLECTED, #$4000, .routine)
+    %cm_toggle_bit("Grapple", !SAMUS_ITEMS_COLLECTED, #$4000, .routine)
   .routine
     LDA !SAMUS_ITEMS_EQUIPPED : EOR #$4000 : STA !SAMUS_ITEMS_EQUIPPED
     RTL
 
 ti_xray:
-    %cm_toggle_bit("X-Ray", $7E0000+!SAMUS_ITEMS_COLLECTED, #$8000, .routine)
+    %cm_toggle_bit("X-Ray", !SAMUS_ITEMS_COLLECTED, #$8000, .routine)
   .routine
     LDA !SAMUS_ITEMS_EQUIPPED : EOR #$8000 : STA !SAMUS_ITEMS_EQUIPPED
     RTL
@@ -1322,13 +1461,13 @@ MiscMenu:
     %cm_header("MISC OPTIONS")
 
 misc_bluesuit:
-    %cm_toggle("Blue Suit", $7E0000+!SAMUS_DASH_COUNTER, #$0004, #0)
+    %cm_toggle("Blue Suit", !SAMUS_DASH_COUNTER, #$0004, #0)
 
 misc_flashsuit:
-    %cm_toggle("Flash Suit", $7E0000+!SAMUS_SHINE_TIMER, #$0001, #0)
+    %cm_toggle("Flash Suit", !SAMUS_SHINE_TIMER, #$0001, #0)
 
 misc_hyperbeam:
-    %cm_toggle_bit("Hyper Beam", $7E0000+!SAMUS_HYPER_BEAM, #$8000, #.routine)
+    %cm_toggle_bit("Hyper Beam", !SAMUS_HYPER_BEAM, #$8000, #.routine)
   .routine
     AND #$8000 : BEQ .off
     LDA #$0003 ; jump table index
@@ -1583,7 +1722,7 @@ game_goto_controls:
     %cm_submenu("Controller Setting Mode", #ControllerSettingMenu)
 
 game_debugmode:
-    %cm_toggle("Debug Mode", $7E0000+!DEBUG_MODE_FLAG, #$0001, #0)
+    %cm_toggle("Debug Mode", !DEBUG_MODE_FLAG, #$0001, #0)
 
 game_debugbrightness:
     %cm_toggle("Debug CPU Brightness", $7E0DF4, #$0001, #0)
@@ -1743,9 +1882,7 @@ action_assign_input:
 
     CMP #$FFFF : BEQ +                       ; skip sfx if detection failed
     %sfxconfirm()
-+   JSL cm_go_back
-    JSL cm_calculate_max
-    RTL
++   JML cm_previous_menu
 }
 
 check_duplicate_inputs:
@@ -1799,8 +1936,7 @@ check_duplicate_inputs:
   .not_detected
     %sfxfail()
     LDA #$FFFF
-    JSL cm_go_back
-    JML cm_calculate_max
+    JML cm_previous_menu
 
   .shot
     LDA !ram_cm_ctrl_swap : AND #$0030 : BEQ +  ; check if old input is L or R
@@ -1908,9 +2044,7 @@ action_set_common_controls:
     LDA.l ControllerLayoutTable+10,X : STA !IH_INPUT_ANGLE_UP
     LDA.l ControllerLayoutTable+12,X : STA !IH_INPUT_ANGLE_DOWN
     %sfxconfirm()
-    JSL cm_go_back
-    JSL cm_calculate_max
-    RTL
+    JML cm_previous_menu
 
 ControllerLayoutTable:
     ;  shot     jump     dash     cancel        select        up       down
@@ -2176,37 +2310,22 @@ print pc, " mainmenu SoundTest end"
 print pc, " mainmenu MemoryEditor start"
 
 MemoryEditorMenu:
-    dw #memory_addr_bank
-    dw #memory_addr_hi
-    dw #memory_addr_lo
+    dw #memory_bank
+    dw #memory_address
     dw #$FFFF
     dw #memory_size
     dw #$FFFF
-    dw #memory_edit_hi
-    dw #memory_edit_lo
+    dw #memory_edit_value
     dw #memory_edit_write
     dw #$0000
     %cm_header("MEMORY EDITOR")
     %cm_footer("NEARBY MEMORY SHOWN HERE")
 
-memory_addr_bank:
-    %cm_numfield_hex("Address Bank Byte", !ram_mem_address_bank, 0, 255, 1, 8, #0)
+memory_bank:
+    %cm_numfield_hex("Bank Byte", !ram_mem_address_bank, 0, 255, 1, 8, #0)
 
-memory_addr_hi:
-    %cm_numfield_hex("Address High Byte", !ram_mem_address_hi, 0, 255, 1, 8, .routine)
-  .routine
-    %a8()
-    XBA : LDA !ram_mem_address_lo
-    STA !ram_mem_address
-    RTL
-
-memory_addr_lo:
-    %cm_numfield_hex("Address Low Byte", !ram_mem_address_lo, 0, 255, 1, 8, .routine)
-  .routine
-    %a8()
-    XBA : LDA !ram_mem_address_hi : XBA
-    STA !ram_mem_address
-    RTL
+memory_address:
+    %cm_numfield_hex_word("Address", !ram_mem_address, #$FFFF, #0)
 
 memory_size:
     dw !ACTION_CHOICE
@@ -2217,31 +2336,23 @@ memory_size:
     db #$28, "      8-BIT", #$FF
     db $FF
 
-memory_edit_hi:
-    %cm_numfield_hex("Edit High Byte", !ram_mem_editor_hi, 0, 255, 1, 8, #0)
-
-memory_edit_lo:
-    %cm_numfield_hex("Edit Low Byte", !ram_mem_editor_lo, 0, 255, 1, 8, #0)
+memory_edit_value:
+    %cm_numfield_hex_word("Value to Write", !ram_mem_editor_value, #$FFFF, #0)
 
 memory_edit_write:
     %cm_jsl("Write to Address", .routine, #0)
   .routine
     ; setup indirect addressing
     %a8()
-    LDA !ram_mem_address_lo : STA !DP_Address
-    LDA !ram_mem_address_hi : STA !DP_Address+1
+    LDA !ram_mem_address : STA !DP_Address
     LDA !ram_mem_address_bank : STA !DP_Address+2
-
-    LDA !ram_mem_memory_size : BNE .eight_bit
-    ; 16-bit write
-    LDA !ram_mem_editor_hi : XBA : LDA !ram_mem_editor_lo
+    ; 8-bit or 16-bit?
+    LDA !ram_mem_memory_size : BEQ .write
+    %a8()
+  .write
+    LDA !ram_mem_editor_value : STA [!DP_Address]
     %a16()
-    STA [!DP_Address]
-    RTL
-
-  .eight_bit
-    LDA !ram_mem_editor_hi : XBA : LDA !ram_mem_editor_lo
-    STA [!DP_Address]
+    %sfxconfirm()
     RTL
 print pc, " mainmenu MemoryEditor end"
 

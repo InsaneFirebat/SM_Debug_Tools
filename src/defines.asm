@@ -21,6 +21,11 @@
 !DP_FirstDigit = $1A
 !DP_SecondDigit = $1C
 !DP_ThirdDigit = $1E
+; v single digit editing v
+!DP_DigitAddress = $20 ; 0x4
+!DP_DigitValue = $24
+!DP_DigitMinimum = $26
+!DP_DigitMaximum = $28
 
 ; !DEBUGMENU is defined in main.asm
 !ram_cm_menu_stack = !DEBUGMENU+$00 ; $10 bytes
@@ -28,53 +33,53 @@
 
 !ram_cm_stack_index = !DEBUGMENU+$20
 !ram_cm_cursor_max = !DEBUGMENU+$22
-!ram_cm_menu_bank = !DEBUGMENU+$24
-!ram_cm_leave = !DEBUGMENU+$26
-!ram_cm_controller = !DEBUGMENU+$28
-!ram_cm_input_counter = !DEBUGMENU+$2A
-!ram_cm_input_timer = !DEBUGMENU+$2C
-!ram_cm_init = !DEBUGMENU+$2E
+!ram_cm_horizontal_cursor = !DEBUGMENU+$24
+!ram_cm_menu_bank = !DEBUGMENU+$26
+!ram_cm_leave = !DEBUGMENU+$28
+!ram_cm_controller = !DEBUGMENU+$2A
+!ram_cm_input_counter = !DEBUGMENU+$2C
+!ram_cm_input_timer = !DEBUGMENU+$2E
+!ram_cm_init = !DEBUGMENU+$30
+!ram_cm_ctrl_mode = !DEBUGMENU+$32
+!ram_cm_ctrl_assign = !DEBUGMENU+$34
+!ram_cm_ctrl_swap = !DEBUGMENU+$36
 
-!ram_cm_ctrl_assign = !DEBUGMENU+$30
-!ram_cm_ctrl_swap = !DEBUGMENU+$32
+!ram_mem_editor_active = !DEBUGMENU+$38
+!ram_mem_editor_value = !DEBUGMENU+$3A
+!ram_mem_address_bank = !DEBUGMENU+$3C
+!ram_mem_address = !DEBUGMENU+$3E
+!ram_mem_memory_size = !DEBUGMENU+$40
+!ram_mem_line_position = !DEBUGMENU+$42
+!ram_mem_loop_counter = !DEBUGMENU+$44
 
-!ram_mem_editor_active = !DEBUGMENU+$34
-!ram_mem_editor_hi = !DEBUGMENU+$36
-!ram_mem_editor_lo = !DEBUGMENU+$38
-!ram_mem_address_bank = !DEBUGMENU+$3A
-!ram_mem_address = !DEBUGMENU+$3C
-!ram_mem_address_hi = !DEBUGMENU+$3E
-!ram_mem_address_lo = !DEBUGMENU+$40
-!ram_mem_memory_size = !DEBUGMENU+$42
-!ram_mem_line_position = !DEBUGMENU+$44
-!ram_mem_loop_counter = !DEBUGMENU+$46
+!ram_fix_scroll_offsets = !DEBUGMENU+$46
 
-!ram_cm_etanks = !DEBUGMENU+$48
-!ram_cm_reserve = !DEBUGMENU+$4A
-!ram_cm_varia = !DEBUGMENU+$4C
-!ram_cm_gravity = !DEBUGMENU+$4E
-!ram_cm_morph = !DEBUGMENU+$50
-!ram_cm_bombs = !DEBUGMENU+$52
-!ram_cm_spring = !DEBUGMENU+$54
-!ram_cm_screw = !DEBUGMENU+$56
-!ram_cm_hijump = !DEBUGMENU+$58
-!ram_cm_space = !DEBUGMENU+$5A
-!ram_cm_speed = !DEBUGMENU+$5C
-!ram_cm_charge = !DEBUGMENU+$5E
-!ram_cm_ice = !DEBUGMENU+$60
-!ram_cm_wave = !DEBUGMENU+$62
-!ram_cm_spazer = !DEBUGMENU+$64
-!ram_cm_plasma = !DEBUGMENU+$66
+!ram_soundtest_lib1 = !DEBUGMENU+$48
+!ram_soundtest_lib2 = !DEBUGMENU+$4A
+!ram_soundtest_lib3 = !DEBUGMENU+$4C
+!ram_soundtest_music = !DEBUGMENU+$4E
+!ram_music_toggle = !DEBUGMENU+$50
 
-!ram_soundtest_lib1 = !DEBUGMENU+$68
-!ram_soundtest_lib2 = !DEBUGMENU+$6A
-!ram_soundtest_lib3 = !DEBUGMENU+$6C
-!ram_soundtest_music = !DEBUGMENU+$6E
-!ram_music_toggle = !DEBUGMENU+$70
+!ram_cm_etanks = !DEBUGMENU+$52
+!ram_cm_reserve = !DEBUGMENU+$54
+!ram_cm_varia = !DEBUGMENU+$56
+!ram_cm_gravity = !DEBUGMENU+$58
+!ram_cm_morph = !DEBUGMENU+$5A
+!ram_cm_bombs = !DEBUGMENU+$5C
+!ram_cm_spring = !DEBUGMENU+$5E
+!ram_cm_screw = !DEBUGMENU+$60
+!ram_cm_hijump = !DEBUGMENU+$62
+!ram_cm_space = !DEBUGMENU+$64
+!ram_cm_speed = !DEBUGMENU+$66
+!ram_cm_charge = !DEBUGMENU+$68
+!ram_cm_ice = !DEBUGMENU+$6A
+!ram_cm_wave = !DEBUGMENU+$6C
+!ram_cm_spazer = !DEBUGMENU+$6E
+!ram_cm_plasma = !DEBUGMENU+$70
 
-!ram_fix_scroll_offsets = !DEBUGMENU+$72
+; free space up to +$7F
 
-!ram_cgram_cache = !DEBUGMENU+$80 ; $20 bytes
+!ram_cgram_cache = !DEBUGMENU+$80 ; $30 bytes
 
 
 ; -----------------
@@ -106,11 +111,11 @@
 !ram_crash_mem_viewer = !CRASHDUMP+$52
 !ram_crash_mem_viewer_bank = !CRASHDUMP+$54
 !ram_crash_temp = !CRASHDUMP+$56
-
-!ram_crash_input = !CRASHDUMP+$60
-!ram_crash_input_new = !CRASHDUMP+$62
-!ram_crash_input_prev = !CRASHDUMP+$64
-!ram_crash_input_timer = !CRASHDUMP+$66
+!ram_crash_bg = !CRASHDUMP+$58
+!ram_crash_input = !CRASHDUMP+$5A
+!ram_crash_input_new = !CRASHDUMP+$5C
+!ram_crash_input_prev = !CRASHDUMP+$5E
+!ram_crash_input_timer = !CRASHDUMP+$60
 
 
 ; -------
@@ -133,6 +138,7 @@
 
 !IH_INPUT_HELD = #$0001
 !IH_INPUT_START = #$1000
+!IH_INPUT_UPDOWN = #$0C00
 !IH_INPUT_UP = #$0800
 !IH_INPUT_DOWN = #$0400
 !IH_INPUT_LEFTRIGHT = #$0300
@@ -154,11 +160,12 @@
 !ACTION_NUMFIELD            = #$0008
 !ACTION_NUMFIELD_HEX        = #$000A
 !ACTION_NUMFIELD_WORD       = #$000C
-!ACTION_CHOICE              = #$000E
-!ACTION_CTRL_INPUT          = #$0010
-!ACTION_JSL                 = #$0012
-!ACTION_JSL_SUBMENU         = #$0014
-!ACTION_NUMFIELD_SOUND      = #$0016
+!ACTION_NUMFIELD_HEX_WORD   = #$000E
+!ACTION_CHOICE              = #$0010
+!ACTION_CTRL_INPUT          = #$0012
+!ACTION_JSL                 = #$0014
+!ACTION_JSL_SUBMENU         = #$0016
+!ACTION_NUMFIELD_SOUND      = #$0018
 
 
 ; --------------

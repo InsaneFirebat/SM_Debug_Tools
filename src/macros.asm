@@ -61,11 +61,11 @@ macro cm_numfield(title, addr, start, end, increment, heldincrement, jsltarget)
     db #$28, "<title>", #$FF
 endmacro
 
-macro cm_numfield_word(title, addr, start, end, increment, heldincrement, jsltarget)
+macro cm_numfield_word(title, addr, start, end, jsltarget)
 ; Allows editing an 16-bit value at the specified address
     dw !ACTION_NUMFIELD_WORD
     dl <addr>
-    dw <start>, <end>, <increment>;, <heldincrement>
+    dw <start>, <end>
     dw <jsltarget>
     db #$28, "<title>", #$FF
 endmacro
@@ -79,10 +79,12 @@ macro cm_numfield_hex(title, addr, start, end, increment, heldincrement, jsltarg
     db #$28, "<title>", #$FF
 endmacro
 
-macro cm_numfield_hex_word(title, addr)
+macro cm_numfield_hex_word(title, addr, bitmask, jsltarget)
 ; Displays a 16-bit value in hexadecimal
     dw !ACTION_NUMFIELD_HEX_WORD
     dl <addr>
+    dw <bitmask>
+    dw <jsltarget>
     db #$28, "<title>", #$FF
 endmacro
 
@@ -200,6 +202,48 @@ macro cm_numfield_sound(title, addr, start, end, increment, jsltarget)
     db <start>, <end>, <increment>
     dw <jsltarget>
     db #$28, "<title>", #$FF
+endmacro
+
+macro SDE_add(label, value, mask, inverse)
+cm_SDE_add_<label>:
+; subroutine to add to a specific hex digit, used in cm_edit_digits
+    AND <mask> : CMP <mask> : BEQ .inc2zero
+    CLC : ADC <value> : BRA .store
+  .inc2zero
+    LDA #$0000
+  .store
+    STA !DP_DigitValue
+    ; return original value with edited digit masked away
+    LDA [!DP_DigitAddress] : AND <inverse>
+    RTS
+endmacro
+
+macro SDE_sub(label, value, mask, inverse)
+cm_SDE_sub_<label>:
+; subroutine to subtract from a specific hex digit, used in cm_edit_digits
+    AND <mask> : BEQ .set2max
+    SEC : SBC <value> : BRA .store
+  .set2max
+    LDA <mask>
+  .store
+    STA !DP_DigitValue
+    ; return original value with edited digit masked away
+    LDA [!DP_DigitAddress] : AND <inverse>
+    RTS
+endmacro
+
+macro SDE_dec(label, address)
+; increments or decrements an address based on controller input, used in cm_edit_decimal_digits
+    LDA !CONTROLLER_PRI : BIT !IH_INPUT_UP : BNE .<label>_inc
+    ; dec
+    LDA <address> : DEC : BPL .store_<label>
+    LDA #$0009 : BRA .store_<label>
+  .<label>_inc
+    LDA <address> : INC
+    CMP #$000A : BMI .store_<label>
+    LDA #$0000
+  .store_<label>
+    STA <address>
 endmacro
 
 
