@@ -9,8 +9,8 @@ table ../resources/normal.tbl
 ; The crash handler displays stack and register information upon a crash
 !FEATURE_CRASH_HANDLER ?= 0
 !CRASH_EXTRA_PAGES ?= 0 ; Set to 1 to add the memory viewer and extra page to the crash handler
-!CRASHDUMP = $7FFD00 ; Change this to move all menu RAM at once, ~$60 bytes
-!FREESPACE_CRASH_HANDLER = $80E000 ; Must live in bank $80 by default, <$200 bytes without extra pages
+!CRASHDUMP = $7FFD00 ; Change this to move all crash handler RAM at once, ~$60 bytes
+!FREESPACE_CRASH_HANDLER = $80E000 ; Must live in bank $80 by default, <$160 bytes without extra pages
 !FREESPACE_CRASH_HANDLER_CODE = $80E200 ; <640h bytes if single page, <A00h bytes if extra pages enabled, banks $80-BF
 !FREESPACE_CRASH_HANDLER_TEXT = $DEEE00 ; <100-200h bytes that can live anywhere in the ROM
 !FREESPACE_CRASH_HANDLER_GFX = $DFF700 ; $900 bytes
